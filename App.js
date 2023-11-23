@@ -1,7 +1,9 @@
-
-import { View, Text, FlatList, Image, StyleSheet, Button  } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, FlatList, Image, StyleSheet, TouchableWithoutFeedback, ScrollView   } from 'react-native';
+import { NavigationContainer } from '@react-navigation/native';
+import { createStackNavigator } from '@react-navigation/stack';
 import ProductList from './components/ProductList'; 
-import ShoppingCart from './components/ShoppingCart';
+import ShoppingCartButtons from './components/ShoppingCartButtons';
 const productsData = {
   data: {
     items: [
@@ -542,63 +544,130 @@ const productsData = {
   },
 };
 
+const Stack = createStackNavigator();
+
 const ProductApp = () => {
-  const renderItem = ({ item }) => (
+  
+  const [cartItems, setCartItems] = useState([]);
+  const [selectedItem, setSelectedItem] = useState(null);
+  
+
+  const addToCart = (product) => {
+    setCartItems([...cartItems, product]);
+  };
+
+  const removeFromCart = (product) => {
+    const updatedCart = cartItems.filter(item => item.id !== product.id);
+    setCartItems(updatedCart);
+  };
+
+  const ProductList = ({navigation}) => {
+    return <View style={styles.container}>
+      <FlatList
+        data={productsData.data.items}
+        keyExtractor={(item) => item.id}
+        renderItem={({item}) => <ProductListItem item={item} navigation={navigation}/>}
+      />
+    </View>
+  };
+  
+  const ProductListItem = ({item, navigation}) => {
+    return (
+    <TouchableWithoutFeedback onPress={() => {
+      setSelectedItem(item);
+      navigation.navigate('Product Details', { product: item });
+    }}>
     <View style={styles.itemContainer}>
       <Image source={{ uri: item.images[0] }} style={styles.productImage} />
-      <View style={styles.productDetails}>
+      <View style={styles.productDetails} >
         <Text style={styles.productName}>{item.name}</Text>
         <Text style={styles.productDescription}>{item.description}</Text>
         <Text style={styles.productPrice}>Price: ${item.price}</Text>
       </View>
-       <ProductList />
-      <ShoppingCart />
+      <ShoppingCartButtons item={item} quantity={cartItems.filter((prod) => prod.id === item.id).length} onAddItem={addToCart} onRemoveItem={removeFromCart} />
     </View>
-  );
+    </TouchableWithoutFeedback>
+  )};
 
+  const ProductDetails = ({ route }) => {
+  const { product } = route.params;
+
+  return (
+    <ScrollView style={styles.container}>
+      <Image source={{ uri: product.images[0] }} style={styles.productImage} />
+      <View style={styles.detailsContainer}>
+        <Text style={styles.productName}>{product.name}</Text>
+        <Text style={styles.productPrice}>Price: ${product.price}</Text>
+        <Text style={styles.productDescription}>{product.description}</Text>
+
+        <View style={styles.featuresContainer}>
+          <Text style={styles.featuresTitle}>Features:</Text>
+          <Text style={styles.featuresText} dangerouslySetInnerHTML={{ __html: product.features }} />
+        </View>
+      </View>
+    </ScrollView>
+  );
+};
 
 
   return (
-    <View style={styles.container}>
-      <FlatList
-        data={productsData.data.items}
-        keyExtractor={(item) => item.id}
-        renderItem={renderItem}
-      />
-    </View>
+    <NavigationContainer>
+      <Stack.Navigator initialRouteName="Product List">
+        <Stack.Screen name="Product List" component={ProductList} />
+        <Stack.Screen name="Product Details" component={ProductDetails} />
+      </Stack.Navigator>
+    </NavigationContainer>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 16,
-  },
-  itemContainer: {
-    flexDirection: 'row',
-    borderBottomWidth: 1,
-    borderColor: '#ccc',
-    paddingVertical: 8,
+    backgroundColor: '#f0f0f0',
   },
   productImage: {
-    width: 80,
-    height: 80,
-    marginRight: 16,
+    width: '100%',
+    height: 300,
+    resizeMode: 'cover',
   },
-  productDetails: {
-    flex: 1,
+  detailsContainer: {
+    backgroundColor: '#fff',
+    padding: 16,
+    borderRadius: 10,
+    margin: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
   },
   productName: {
-    fontSize: 18,
+    fontSize: 24,
     fontWeight: 'bold',
-  },
-  productDescription: {
-    marginTop: 4,
-    color: '#666',
+    marginBottom: 8,
   },
   productPrice: {
-    marginTop: 8,
+    fontSize: 18,
     fontWeight: 'bold',
+    color: '#2ecc71', // Green color for price
+    marginBottom: 8,
+  },
+  productDescription: {
+    fontSize: 16,
+    marginBottom: 16,
+    color: '#555',
+  },
+  featuresContainer: {
+    marginTop: 16,
+  },
+  featuresTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 8,
+  },
+  featuresText: {
+    fontSize: 16,
+    color: '#555',
   },
 });
 
